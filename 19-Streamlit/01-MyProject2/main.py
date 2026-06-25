@@ -8,6 +8,9 @@ from langchain import hub
 from dotenv import load_dotenv
 import glob
 
+# API Key 정보 로드
+load_dotenv()
+
 st.title("나만의 챗GPT💬")
 
 # 대화 기록을 저장하기 위한 용도로 생성한다.
