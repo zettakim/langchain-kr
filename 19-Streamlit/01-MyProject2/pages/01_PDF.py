@@ -10,12 +10,17 @@ from langchain_community.document_loaders import PyMuPDFLoader
 from langchain_community.vectorstores import FAISS
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
-from langchain_core.prompts import PromptTemplate
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
-
 from dotenv import load_dotenv
-import glob
+from langchain_teddynote import logging
+
 import os
+
+# API KEY 정보 로드
+load_dotenv()
+
+# 프러젝트 이름을 입력합니다.
+logging.langsmith("[Project] PDF RAG")
 
 # 캐시 디렉토리 생성
 if not os.path.exists(".cache"):
@@ -49,7 +54,9 @@ with st.sidebar:
     # 파일 업로드
     uploaded_file = st.file_uploader("피일 업로드", type=["pdf"])
 
-    selected_prompt = "prompts/pdf-rag.yaml"
+    selected_model = st.selectbox(
+        "LLM 선택", ["gpt-4o", "gpt-4-turbo", "gpt-4.1-mini"], index=0
+    )
 
 
 # 이전 대화를 출력
@@ -92,36 +99,24 @@ def embed_file(file):
     return retriever
 
 # 체인 생성
-def create_chain(retriever): 
-    # prompt | llm | oitput_parser
-
-    # Prompt 적용
-    # prompt = load_prompt(prompt_filepath, encoding="utf-8")
- 
+def create_chain(retriever, model_name="gpt-4.1-mini"): 
+    def format_docs(docs):
+        return "\n\n".join(doc.page_content for doc in docs)
+    
     # 단계 6: 프롬프트 생성(Create Prompt)
     # 프롬프트를 생성합니다.
-    prompt = PromptTemplate.from_template(
-        """You are an assistant for question-answering tasks. 
-    Use the following pieces of retrieved context to answer the question. 
-    If you don't know the answer, just say that you don't know. 
-    Answer in Korean.
-
-    #Context: 
-    {context}
-
-    #Question:
-    {question}
-
-    #Answer:"""
-    )
+    prompt = load_prompt("prompts/pdf-rag.yaml", encoding="utf-8")
 
     # 단계 7: 언어모델(LLM) 생성
     # 모델(LLM) 을 생성합니다.
-    llm = ChatOpenAI(model_name="gpt-4.1-mini", temperature=0)
+    llm = ChatOpenAI(model_name=model_name, temperature=0)
 
     # 단계 8: 체인(Chain) 생성
     chain = (
-        {"context": retriever, "question": RunnablePassthrough()}
+        {
+            "context": retriever | format_docs,
+            "question": RunnablePassthrough(),
+        }
         | prompt
         | llm
         | StrOutputParser()
@@ -132,7 +127,7 @@ def create_chain(retriever):
 if uploaded_file:
     # 파일 업로드 후 retriever 생성 (작업 시간이 오래 걸릴 예정)
     retriever = embed_file(uploaded_file)
-    chain = create_chain(retriever)
+    chain = create_chain(retriever, model_name=selected_model)
     st.session_state["chain"] = chain
 
 # 초기화 버튼이 눌리면...
@@ -155,7 +150,8 @@ if user_input:
 
     if chain is not None:
         # 스트리밍 호출
-        response = chain.stream({"question": user_input})
+        # response = chain.stream({"question": user_input})
+        response = chain.stream(user_input)
         with st.chat_message("assistant"):
             # 빈 공간(컨테이너)을 만들어서, 여기에 토근을 스트리밍 출력한다.
             container = st.empty()
