@@ -10,12 +10,16 @@ from langchain_openai import ChatOpenAI
 from langchain_community.utilities import SerpAPIWrapper
 from langchain_teddynote.prompts import load_prompt
 
+# # 검색을 위한 API KEY 설정
+# os.environ["SERPAPI_API_KEY"] = (
+#     "48f8cd1c27e868c68cb62a12893381fa75033f5e59572ad0c7c56be2e38fbf8b"
+# )
 
-# 사내 네트워크(프록시) 환경에서 SSL 인증서 검증 오류 방지용 CA 번들 지정
-_ca_bundle = os.path.expanduser("~/.corp-ca-bundle.pem")
-if os.path.exists(_ca_bundle):
-    os.environ["REQUESTS_CA_BUNDLE"] = _ca_bundle
-    os.environ["SSL_CERT_FILE"] = _ca_bundle
+# # 사내 네트워크(프록시) 환경에서 SSL 인증서 검증 오류 방지용 CA 번들 지정
+# _ca_bundle = os.path.expanduser("~/.corp-ca-bundle.pem")
+# if os.path.exists(_ca_bundle):
+#     os.environ["REQUESTS_CA_BUNDLE"] = _ca_bundle
+#     os.environ["SSL_CERT_FILE"] = _ca_bundle
 
 
 
