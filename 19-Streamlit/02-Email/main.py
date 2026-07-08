@@ -4,31 +4,34 @@ import streamlit as st
 from langchain_core.messages.chat import ChatMessage
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.pydantic_v1 import BaseModel, Field
+from pydantic import BaseModel, Field
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain_openai import ChatOpenAI
 from langchain_community.utilities import SerpAPIWrapper
 from langchain_teddynote.prompts import load_prompt
 
 
-# 검색을 위한 API KEY 설정
-os.environ["SERPAPI_API_KEY"] = (
-    "e76de14ee240e0051ed8bb05d5db568dd1dc9cfcaa2b51fd83613829a85bf244"
-)
+# 사내 네트워크(프록시) 환경에서 SSL 인증서 검증 오류 방지용 CA 번들 지정
+_ca_bundle = os.path.expanduser("~/.corp-ca-bundle.pem")
+if os.path.exists(_ca_bundle):
+    os.environ["REQUESTS_CA_BUNDLE"] = _ca_bundle
+    os.environ["SSL_CERT_FILE"] = _ca_bundle
+
+
+
+# API KEY 정보로드 (.env 파일에서 OPENAI_API_KEY, SERPAPI_API_KEY 등을 읽어온다)
+load_dotenv()
 
 
 # 이메일 본문으로부터 주요 엔티티 추출
 class EmailSummary(BaseModel):
     person: str = Field(description="메일을 보낸 사람")
     company: str = Field(description="메일을 보낸 사람의 회사 정보")
-    email: str = Field(description="메일을 보낸 사람의 이메일 주소")
+    email: str = Field(description="메일을 보낸 사람의 이메일 주소") 
     subject: str = Field(description="메일 제목")
     summary: str = Field(description="메일 본문을 요약한 텍스트")
     date: str = Field(description="메일 본문에 언급된 미팅 날짜와 시간")
 
-
-# API KEY 정보로드
-load_dotenv()
 
 st.title("Email 요약기 💬")
 
@@ -111,7 +114,7 @@ if user_input:
     # 사용자의 입력
     st.chat_message("user").write(user_input)
 
-    # 1) 이메일을 파싱하는 chain 을 생성
+    # 1) 이메일을 파싱하는 chain 을 생성 및 실행
     email_chain = create_email_parsing_chain()
     # email 에서 주요 정보를 추출하는 체인을 실행
     answer = email_chain.invoke({"email_conversation": user_input})
